@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "minimum_chrome_version": "120",
+  "name": "X ホームの閲覧位置",
+  "version": "0.2.3",
+  "description": "ホームの閲覧位置保持と、本人が開始するDOM観測。",
+  "action": { "default_title": "X ホームの閲覧位置", "default_popup": "popup.html" },
+  "content_scripts": [{
+    "matches": ["https://x.com/*"],
+    "js": ["content.js"],
+    "run_at": "document_idle"
+  }]
+}
