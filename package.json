@@ -1,0 +1,21 @@
+{
+  "name": "x-home-anchor",
+  "version": "0.2.5",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test tests/*.test.ts",
+    "check": "npm run typecheck && npm test"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.3.5",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
+  }
+}

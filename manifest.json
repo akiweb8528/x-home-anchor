@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "minimum_chrome_version": "120",
+  "name": "X ホームの閲覧位置",
+  "version": "0.2.5",
+  "description": "Xホームの閲覧位置を保ち、操作した新着表示件数を累計します。",
+  "action": { "default_title": "X ホームの閲覧位置", "default_popup": "popup.html" },
+  "content_scripts": [{
+    "matches": ["https://x.com/*"],
+    "js": ["content.js"],
+    "run_at": "document_idle"
+  }]
+}

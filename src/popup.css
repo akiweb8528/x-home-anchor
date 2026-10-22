@@ -1,0 +1,6 @@
+:root { color-scheme: light dark; font: 14px/1.55 system-ui, sans-serif; --bg: #f7f9fc; --ink: #182534; --muted: #536479; }
+* { box-sizing: border-box; }
+body { width: 280px; margin: 0; padding: 16px; background: var(--bg); color: var(--ink); }
+h1 { margin: 0 0 10px; font-size: 18px; line-height: 1.4; }
+#status { margin: 0; color: var(--muted); }
+@media (prefers-color-scheme: dark) { :root { --bg: #111923; --ink: #e5edf6; --muted: #a6b7cc; } }

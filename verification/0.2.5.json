@@ -1,0 +1,162 @@
+{
+  "date": "2026-10-22",
+  "version": "0.2.5",
+  "baseline": "59d3e6b39819bfd243188d9839ff0037db173dbc",
+  "environment": {
+    "node": "24.22.1",
+    "browser": "HeadlessChrome/152.0.0.0",
+    "driver": "Chrome DevTools MCP",
+    "scope": "Synthetic localhost DOM executing the built dist/content.js unchanged. Chrome runtime messaging and popup tabs transport were stubbed; no authenticated X session or native extension installation was used.",
+    "observation": "Fixture frame sampling did not request product status or mutate the DOM. Refreshes used real trusted click or Enter input."
+  },
+  "automated": {
+    "commands": [
+      "npm ci",
+      "npm run check",
+      "npm run build"
+    ],
+    "testsPassed": 24,
+    "testsFailed": 0,
+    "buildInspection": "Manifest/package/lockfile versions match; license included; diagnostic collection, messages, UI and JSON export removed from source and generated content/popup."
+  },
+  "browser": {
+    "withoutPopup": {
+      "counts": [
+        0,
+        35,
+        105
+      ],
+      "scrollY": [
+        1320,
+        5940,
+        15180
+      ],
+      "anchorTop": 150,
+      "duplicateMovement": false
+    },
+    "topResetThenLaterInsertion": {
+      "resetAtMs": 100,
+      "laterInsertionAtMs": 1600,
+      "scrollY": [
+        1320,
+        0,
+        1320,
+        5940
+      ],
+      "anchorTop": 150
+    },
+    "unknownIds": {
+      "posts": 0,
+      "boxes": 135,
+      "scrollY": 5940,
+      "anchorTop": 150
+    },
+    "reusedElements": {
+      "articles": 100,
+      "scrollY": 5940,
+      "anchorTop": 150
+    },
+    "userInput": {
+      "input": "ArrowDown before delayed insertion",
+      "scrollY": 1320,
+      "delayedCorrection": false,
+      "counterIncrement": 35
+    },
+    "timelineSwitch": {
+      "input": "Following tab before delayed insertion",
+      "scrollY": 1320,
+      "delayedCorrection": false,
+      "counterPreserved": true
+    },
+    "deadline": {
+      "regionRemovedAtMs": 120,
+      "regionReturnedAtMs": 5500,
+      "scrollYAfterReturn": 0,
+      "lateCorrection": false
+    },
+    "domLimit": {
+      "articles": 501,
+      "measuredBoxes": 500,
+      "state": "unrecognized",
+      "scrollYBeforeAndAfter": 1320,
+      "counterStillActive": true
+    },
+    "urlChange": {
+      "method": "pushState without popstate",
+      "checkedAfterMs": 650,
+      "outsideCounterHidden": true,
+      "homeCounterRestored": true,
+      "totalPreserved": 280
+    },
+    "keyboard": {
+      "input": "Enter on refresh control",
+      "trusted": true,
+      "scrollY": 5940,
+      "anchorTop": 150,
+      "counterIncrement": 35
+    },
+    "identity": {
+      "outerIdPreferredOverQuote": true,
+      "unknownIdRemainsNull": true,
+      "unknownBoxRetained": true
+    },
+    "messaging": {
+      "singletonListenerCountAfterReinstall": 1,
+      "counterPreserved": true,
+      "statusShape": [
+        "state"
+      ],
+      "removedCommandsIgnored": [
+        "start",
+        "stop",
+        "clear"
+      ],
+      "wrongSenderIgnored": true
+    },
+    "popup": {
+      "states": [
+        "active",
+        "outside",
+        "unrecognized",
+        "connection failure"
+      ],
+      "liveControllerStates": [
+        "active",
+        "outside",
+        "unrecognized"
+      ],
+      "connectionFailure": "sendMessage rejection",
+      "bodyCssPixels": {
+        "width": 280,
+        "height": 89
+      },
+      "previousBodyCssPixels": {
+        "width": 360,
+        "height": 599
+      },
+      "lightAndDarkScreenshotsInspected": true,
+      "statusFontEnlargementCssPixels": 28,
+      "enlargedBodyHeight": 154,
+      "horizontalOverflow": false,
+      "assessment": "The extension name and status form a compact two-level hierarchy with consistent padding. No diagnostic controls, supporting prose or empty diagnostic area remains. Screenshot inspection was performed by the agent; no human usability study was performed.",
+      "screenshot": "0.2.5-popup.png"
+    },
+    "consoleErrorsOrWarnings": 0
+  },
+  "unverified": [
+    "Live authenticated X compatibility: https://x.com/home returned HTTP ERROR 403.",
+    "Native unpacked-extension loading, isolated-world execution and real chrome.tabs transport were not exercised by the synthetic fixture."
+  ],
+  "cleanup": {
+    "taskPages": "Closed; original about:blank page preserved.",
+    "temporaryServer": "Stopped after evidence capture.",
+    "temporaryFixture": "Removed after evidence capture."
+  },
+  "artifactsSha256": {
+    "content.js": "11641dd3c0a5b1936d2b206ae876b9a702f645c036a4f07196d05e666c67b321",
+    "popup.js": "66547d61e394e3d6d4dd71d27c9e0b2f8cc71ffb4223cbb2dcd816ccf4b78a08",
+    "popup.html": "a699b3de7d93e710cc363e477ce66c94afdfbb6224da8dd707849a1b3445ba91",
+    "popup.css": "277e505f0301efefeafde8dc7c7068a6b21ffb30349fba1902d1713d4409cfd9",
+    "manifest.json": "e78b3e52e8eaed73da7525b46d5340344a649e73db840c1d5cecfa7caa2fe265"
+  }
+}
