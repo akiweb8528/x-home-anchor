@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
+    "package": "node scripts/package.mjs",
     "typecheck": "tsc --noEmit",
     "test": "npm run build && node --test tests/*.test.ts",
     "check": "npm run typecheck && npm test"
