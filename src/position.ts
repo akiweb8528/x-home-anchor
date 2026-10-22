@@ -35,6 +35,8 @@ interface RefreshMeasurement {
   y: number;
   boxes: { element: HTMLElement; y: number }[];
   ids: string[];
+  documentHeight: number;
+  restoredY?: number;
   representativeHeight?: number;
   displayedCount?: number;
   countSource?: 'refresh-control';
@@ -130,7 +132,8 @@ export class PositionKeeper {
     const displayedCount = context?.displayedCount;
     this.measurement = {
       y: this.win.scrollY, boxes: boxes.map(box => ({ element: box.element, y: box.top + this.win.scrollY })),
-      ids: posts.map(post => post.id), representativeHeight: representativeHeight(boxes, this.win.innerHeight),
+      ids: posts.map(post => post.id), documentHeight: this.win.document.documentElement.scrollHeight,
+      representativeHeight: representativeHeight(boxes, this.win.innerHeight),
       ...(displayedCount !== undefined && displayedCount > 0 && Number.isSafeInteger(displayedCount) ? { displayedCount, countSource: context?.countSource } : {}),
     };
     this.restoration = { displayedCount: this.measurement.displayedCount, countSource: this.measurement.countSource, representativeHeight: this.measurement.representativeHeight };
@@ -167,11 +170,12 @@ export class PositionKeeper {
     const before = new Set(baseline.boxes.map(box => box.element));
     const first = baseline.boxes[0];
     const firstIndex = boxes.findIndex(box => box.element === first?.element);
+    let addedHeight: number | undefined;
     if (firstIndex >= 0) {
       const added = boxes[firstIndex].top + this.win.scrollY - first.y;
       const prefixInserted = firstIndex > 0 && boxes.slice(0, firstIndex).some(box => !before.has(box.element));
       const commonShift = baseline.boxes.slice(0, 3).filter(old => boxes.some(box => box.element === old.element && Math.abs(box.top + this.win.scrollY - old.y - added) <= 1)).length >= 3;
-      if (added > 1 && (prefixInserted || commonShift)) baseline.addedHeight = added;
+      if (added > 1 && (prefixInserted || commonShift)) addedHeight = (baseline.restoredY ?? baseline.y) - baseline.y + added;
     }
     // Replacement alone may just be a redraw. Unknown-ID replacements also
     // need changed document geometry, rather than a click or scroll reset alone.
@@ -179,9 +183,33 @@ export class PositionKeeper {
     const newIds = posts.some(post => !baseline.ids.includes(post.id));
     const upperPlacementChanged = first && boxes[0].top + this.win.scrollY > first.y + 1;
     const sameKnownIds = baseline.ids.length > 0 && posts.length === baseline.ids.length && posts.every((post, i) => post.id === baseline.ids[i]);
+    if (this.precisionRestored) {
+      const resetOnly = Math.abs((baseline.restoredY ?? baseline.y) - baseline.y) < 1;
+      const documentGrew = this.win.document.documentElement.scrollHeight > baseline.documentHeight + 1;
+      // A restored insertion can itself advance the virtualized range. New IDs
+      // alone reopen recovery only when the earlier correction merely reset Y.
+      const replacement = !sameKnownIds && ((newNodes || newIds) && documentGrew || newNodes && resetOnly && (newIds || upperPlacementChanged));
+      if (addedHeight === undefined && !replacement) return;
+      // Exact recovery covers the sampled batch, not a later insertion. A new
+      // replacement cannot reuse a height measured for the already-restored batch.
+      this.precisionRestored = false;
+      baseline.addedHeight = addedHeight;
+      baseline.updateAt = performance.now(); this.sawUpdate = true; this.lastActivity = baseline.updateAt;
+      return;
+    }
+    if (addedHeight !== undefined) baseline.addedHeight = addedHeight;
     if ((baseline.addedHeight !== undefined || newIds || newNodes && upperPlacementChanged && !sameKnownIds) && baseline.updateAt === undefined) {
       baseline.updateAt = performance.now(); this.sawUpdate = true; this.lastActivity = baseline.updateAt;
     }
+  }
+  private rememberRestoration(posts: Post[], boxes: PostBox[], sampledY: number) {
+    const baseline = this.measurement;
+    if (!baseline) return;
+    this.precisionRestored = true;
+    baseline.boxes = boxes.map(box => ({ element: box.element, y: box.top + sampledY }));
+    baseline.ids = posts.map(post => post.id);
+    baseline.documentHeight = this.win.document.documentElement.scrollHeight;
+    baseline.restoredY = this.win.scrollY;
   }
   private approximationTarget() {
     const m = this.measurement;
@@ -218,10 +246,12 @@ export class PositionKeeper {
     this.interrupt('approximate', actualDelta);
   }
   changed(posts: Post[], context?: PositionContext) {
-    this.geometryAvailable = (context?.boxes ?? posts).length > 0;
+    const boxes = context?.boxes ?? posts;
+    const sampledY = this.win.scrollY;
+    this.geometryAvailable = boxes.length > 0;
     if (this.checkDeadline() || (!this.anchors.length && !this.refreshing) || this.retired || performance.now() < this.quietUntil) return;
     const now = performance.now();
-    if (this.refreshing) this.measureUpdate(posts, context?.boxes ?? posts);
+    if (this.refreshing) this.measureUpdate(posts, boxes);
     const moved = this.knownY - this.win.scrollY;
     const match = resolveAnchor(this.anchors, posts);
     // A layout batch may include native scroll anchoring. With no residual
@@ -247,7 +277,7 @@ export class PositionKeeper {
     // An unchanged anchor alone does not prove restoration: an offscreen ID may
     // simply have become identifiable. Native anchoring must have moved the
     // scroll position and left no residual displacement to cancel the estimate.
-    if (this.refreshing && Math.abs(moved) >= 1 && Math.abs(match.delta) < 1) this.precisionRestored = true;
+    if (this.refreshing && Math.abs(moved) >= 1 && Math.abs(match.delta) < 1) this.rememberRestoration(posts, boxes, sampledY);
     if (this.refreshing) this.restoration = { ...this.restoration, method: match.neighbor ? 'neighbor' : 'anchor', plannedY: this.win.scrollY + match.delta };
     if (!this.until && Math.abs(match.delta) < 1) { this.capture(posts); return; }
     if (!this.until) this.until = now + CORRECTION_MS;
@@ -260,7 +290,7 @@ export class PositionKeeper {
       this.restoration = { ...this.restoration, actualDelta: actual };
       if (Math.abs(actual - match.delta) > 1) this.interrupt('scroll-clamped');
       else {
-        if (this.refreshing && Math.abs(actual) >= 1) this.precisionRestored = true;
+        if (this.refreshing && Math.abs(actual) >= 1) this.rememberRestoration(posts, boxes, sampledY);
         this.report(match.neighbor ? 'neighbor' : 'corrected', actual);
       }
     }
