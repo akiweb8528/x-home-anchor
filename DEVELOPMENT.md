@@ -47,9 +47,14 @@ then one bounded downward approximation. Observed update evidence allows approxi
 after a 650 ms recovery grace; an inconclusive update still allows count-based
 fallback at three seconds when a displayed count and representative pitch are
 available. A temporarily absent region may return within the original five-second
-deadline, but no movement occurs while the region is unrecognized. Do not add an
-estimate after exact restoration or move upward to an estimated target. User input,
-explicit navigation and timeline changes override position correction. Do not replace page scroll
+deadline, but no movement occurs while the region is unrecognized. Exact restoration
+covers the measured update, including a page top reset; a later insertion can still
+need correction. Compare it with the restored geometry rather than permanently
+disabling approximation after any successful correction. Keep count targets relative
+to the original activation position, discard stale measured heights when a later
+replacement cannot be measured, and never add the same insertion twice or move upward
+to an estimated target. User input, explicit navigation and timeline changes override
+position correction. Do not replace page scroll
 or History APIs or add request interception, API replay, automatic acquisition,
 credential access or telemetry.
 
