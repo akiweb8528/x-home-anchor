@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>X ホームの閲覧位置</title><link rel="stylesheet" href="popup.css"><script src="popup.js" defer></script></head>
+<body>
+  <header><span class="eyebrow">X HOME</span><h1>閲覧位置</h1></header>
+  <p id="status" class="status" role="status">状態を確認中…</p>
+  <section aria-labelledby="diagnostic-title">
+    <div class="section-heading"><h2 id="diagnostic-title">読み込みの診断</h2><span id="recording">停止中</span></div>
+    <p class="hint">このタブで画面に現れた投稿を観測します。</p>
+    <div class="actions"><button id="start" class="primary" disabled>診断を開始</button><button id="stop" disabled>停止</button></div>
+    <dl><div><dt>タイムライン</dt><dd id="timeline">—</dd></div><div><dt>現在のDOM</dt><dd id="dom">—</dd></div><div><dt>初めて現れたID</dt><dd id="unique">—</dd></div><div><dt>再出現したID</dt><dd id="repeat">—</dd></div><div><dt>直近の表示変化</dt><dd id="changed">—</dd></div><div><dt>変化の間隔</dt><dd id="interval">—</dd></div></dl>
+    <p class="hint">DOMの変化です。通信の取得件数・頻度とは異なります。</p>
+    <details><summary>補正結果と記録を見る</summary><p id="position">まだ補正していません</p><p id="identification" class="hint"></p><pre id="events">診断を開始すると記録されます。</pre></details>
+    <div class="actions secondary"><button id="export" disabled>JSONを出力</button><button id="clear" disabled>診断を消去</button></div>
+  </section>
+  <p id="feedback" role="status"></p>
+  <footer>診断はタブ内のみ・最大30分。本文は保存しません。</footer>
+</body>
+</html>
