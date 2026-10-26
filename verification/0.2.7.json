@@ -1,0 +1,74 @@
+{
+  "date": "2026-10-26",
+  "version": "0.2.7",
+  "integratedMain": "0c02ab740fa3498caae01f71436cd97efd9ae4f4",
+  "previousPrHead": "f3057ef33cf4ee9333f877eb1c135a23cb649c9f",
+  "contentSha256": "8115b07546fe67be73a576cbe240cd6f2bd212f0c4f80e5039e347617a9955b4",
+  "automated": {
+    "check": "passed",
+    "unitTests": 95,
+    "newQuoteNavigationTests": 13,
+    "beforeFix": "Six cancellation regressions failed: scroll, window blur and pointercancel, each with no link and a late link.",
+    "browser": "Chrome/155.0.8059.85",
+    "browserGroups": 38,
+    "browserErrors": 0,
+    "browserScope": "Synthetic repost and refresh pages; trusted CDP mouse, keyboard and touch-emulated input; window blur is synthetic; extension messaging is stubbed. All requests are fulfilled locally or blocked.",
+    "hardNavigationIntercepted": false,
+    "waitingCancellation": [
+      "scroll",
+      "window-blur",
+      "pointercancel"
+    ],
+    "lateLinkAndFallbackAfterCancellation": "No navigation in all new DOM regressions; browser late-link cases also passed.",
+    "releaseAndElementBlurWhileWaiting": "passed",
+    "fallbacks": [
+      "missing-link",
+      "missing-more",
+      "inert-link"
+    ],
+    "refreshScope": "Viewport cover, virtualized ID recovery, custom tabs, tall/single unread boundary, input cancellation and no-update timeout."
+  },
+  "live": {
+    "environment": "Existing AI Agent Chrome; unpacked extension reloaded as v0.2.7; X tab reloaded; trusted mouse holds of 750 ms.",
+    "home": {
+      "correctQuotesUrl": true,
+      "timeOriginUnchanged": true,
+      "sentinelRetained": true
+    },
+    "detail": {
+      "correctQuotesUrl": true,
+      "timeOriginUnchanged": true,
+      "sentinelRetained": true
+    },
+    "shortHomeClick": {
+      "stayedOnHome": true,
+      "ordinaryRepostAndQuoteMenuVisible": true,
+      "menuDismissedWithoutAction": true
+    }
+  },
+  "distribution": {
+    "file": "release/x-home-anchor-v0.2.7.zip",
+    "sha256": "0f12d4614bcf14604be2065a12ed60385af5a4e31d641832d42c88f51fc43569",
+    "bytes": 13925,
+    "files": [
+      "LICENSE",
+      "content.js",
+      "manifest.json",
+      "popup.css",
+      "popup.html",
+      "popup.js"
+    ],
+    "exactDistBytes": true,
+    "rootManifest": true,
+    "sourceLicenseMatches": true,
+    "versionsAligned": true,
+    "readmeLink": "Points to the matching versioned archive on upstream main; it becomes available after publication/merge."
+  },
+  "notChecked": [
+    "Physical touch input on live X.",
+    "Live-X cancellation during the menu wait; covered by synthetic DOM and browser tests.",
+    "Integrated live-X new-post acquisition and full position-preservation regression; the previous individual-build record remains in refresh-viewport.json.",
+    "Integrated live-X fallback after deliberately modifying the DOM; synthetic browser coverage and the previous individual-build record remain available.",
+    "Network acquisition counts/frequency, other accounts/languages and long-running use."
+  ]
+}

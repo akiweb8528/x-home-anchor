@@ -44,12 +44,12 @@ function insideExcludedContent(element: Element, article: HTMLElement, timestamp
   }
   return element.closest(articleSelector) !== article;
 }
-function headerStatusLinks(header: Element, article: HTMLElement): { id: string; url: URL }[] {
+function timestampStatusLinks(scope: Element, article: HTMLElement): { id: string; url: URL }[] {
   const links: { id: string; url: URL }[] = [];
-  for (const time of header.querySelectorAll('time')) {
+  for (const time of scope.querySelectorAll('time')) {
     const link = time.closest('a[href]');
     if (insideExcludedContent(time, article, link ?? undefined)) continue;
-    if (!link || !header.contains(link)) continue;
+    if (!link || !scope.contains(link)) continue;
     let url: URL;
     try { url = new URL(link.getAttribute('href') ?? '', 'https://x.com'); } catch { continue; }
     if (url.hostname !== 'x.com' || url.protocol !== 'https:') continue;
@@ -64,7 +64,7 @@ export function postId(article: HTMLElement): string | null {
   const header = [...article.querySelectorAll('[data-testid="User-Name"]')]
     .find(el => !insideExcludedContent(el, article));
   if (!header) return null;
-  const ids = new Set(headerStatusLinks(header, article).map(link => link.id));
+  const ids = new Set(timestampStatusLinks(header, article).map(link => link.id));
   return ids.size === 1 ? [...ids][0] : null;
 }
 
@@ -79,7 +79,7 @@ export function repostTarget(target: EventTarget | null): RepostTarget | null {
   const headers = [...article.querySelectorAll('[data-testid="User-Name"]')]
     .filter(header => !insideExcludedContent(header, article));
   if (headers.length !== 1) return null;
-  const urls = new Set(headerStatusLinks(headers[0], article)
+  const urls = new Set(timestampStatusLinks(article, article)
     .filter(({ url }) => url.origin === 'https://x.com' && !url.username && !url.password)
     .map(({ url }) => `https://x.com${url.pathname.replace(/\/$/, '')}/quotes`));
   if (urls.size !== 1) return null;

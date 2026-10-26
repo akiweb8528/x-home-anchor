@@ -25,9 +25,9 @@ export class RepostHold {
   private observer: MutationObserver;
   private doc: Document;
   private win: Window;
-  private navigate: (url: string) => void;
+  private navigate: (target: RepostTarget) => void;
 
-  constructor(doc: Document, win: Window, navigate: (url: string) => void) {
+  constructor(doc: Document, win: Window, navigate: (target: RepostTarget) => void) {
     this.doc = doc; this.win = win; this.navigate = navigate;
     this.observer = new MutationObserver(records => {
       const press = this.pending;
@@ -62,9 +62,10 @@ export class RepostHold {
       // A native touch menu can arrive before 600 ms and take over the gesture.
       this.suppress(event);
     }, options);
-    for (const type of ['scroll', 'wheel', 'popstate', 'hashchange', 'pagehide', 'blur', 'keydown']) {
+    for (const type of ['scroll', 'wheel', 'popstate', 'hashchange', 'pagehide', 'keydown']) {
       win.addEventListener(type, () => this.cancel(), { ...options, passive: true });
     }
+    win.addEventListener('blur', event => { if (event.target === win) this.cancel(); }, options);
     doc.addEventListener('visibilitychange', () => { if (doc.hidden) this.cancel(); }, options);
     const navigation = (win as Window & { navigation?: EventTarget }).navigation;
     for (const type of ['navigate', 'currententrychange']) navigation?.addEventListener(type, () => this.cancel(), options);
@@ -109,7 +110,7 @@ export class RepostHold {
       this.cancel();
       if (!valid) return;
       this.completed = current;
-      this.navigate(current.url);
+      this.navigate(current);
     }, REPOST_HOLD_MS);
   }
 

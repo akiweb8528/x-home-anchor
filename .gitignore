@@ -1,4 +1,5 @@
 node_modules/
 dist/
+verification/local/
 verification/refresh-viewport-browser.json
 verification/refresh-viewport-*.png

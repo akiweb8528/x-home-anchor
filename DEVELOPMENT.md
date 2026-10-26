@@ -25,7 +25,11 @@ hold timing boundaries, release/click ordering, cancellation, quote boundaries a
 target replacement. They do not reproduce a full browser timeline or measure
 rendering timing. They cannot establish live-X compatibility.
 
-The [refresh viewport verification record](verification/refresh-viewport.json) separates current synthetic
+The [0.2.7 verification record](verification/0.2.7.json) records the integrated
+unit/browser checks, scoped live-X mouse operations and ZIP byte/version checks.
+Earlier individual-build evidence is retained separately.
+
+The [refresh viewport verification record](verification/refresh-viewport.json) separates its synthetic
 checks from the scoped live-X acquisitions. Raw live-page data stays outside the
 repository. The [0.2.6 verification record](verification/0.2.6.json) describes the automated
 checks, synthetic browser interaction evidence and unverified live-X scope.
@@ -34,15 +38,16 @@ timeline checks, popup inspection and transport stubs.
 
 `npm run test:browser` builds and drives a dedicated headless Chrome through CDP
 using trusted mouse/touch/keyboard input and the synthetic repost/refresh fixtures.
+The window-blur cancellation case dispatches a synthetic event; touch input uses
+Chrome emulation. These do not establish physical touch or live-X cancellation behavior.
 Refresh checks cover per-frame post identity and position, canvas pixels, accidental-click
 prevention, keyboard focus, root replacement, late page scroll, imprecise heights,
 custom tabs, unread-boundary alignment (including tall posts) and cancellation.
 Set `CHROME_BIN` to the Chrome executable if it is not `/opt/google/chrome/chrome`.
 Every document response is synthetic; other requests are blocked. Extension
-messaging is stubbed and the fixture intercepts quote navigation to keep the
-document alive for release/click checks. It writes the current browser evidence
-to ignored local files `verification/refresh-viewport-browser.json` and
-`verification/refresh-viewport-*.png`, then closes
+messaging is stubbed. The fixture's activity-menu link handles SPA routing; full
+document navigations are not intercepted. Checks compare timeOrigin to detect
+reloads. Evidence is written to ignored `verification/local/`, then the test closes
 its browser and removes its temporary profile. This verifies neither native
 extension installation nor the live X site's handlers or appearance.
 
@@ -76,6 +81,7 @@ also use the same ZIP as a manually attached release asset.
 | `src/refresh-paint-guard.ts` | Refresh-only viewport copy, rendering checkpoint and cleanup |
 | `src/refresh-total.ts` | Page-memory total of operated new-post controls' displayed counts |
 | `src/repost-hold.ts` | Delegated repost-button hold, cancellation and matching release/click suppression |
+| `src/quote-navigation.ts` | Bounded activation of X's own post-activity menu link and cancellation |
 | `src/model.ts` | Timeline, DOM sample and position-preservation types |
 | `src/content.ts` | Extension messages, singleton installation and page lifecycle |
 | `src/popup.*` | Extension name and current position-preservation status |
@@ -120,16 +126,27 @@ position correction. Do not replace page scroll
 or History APIs or add request interception, API replay, automatic acquisition,
 credential access or telemetry.
 
-The repost hold resolves the button's outer-post timestamp through the adapter at
+The repost hold resolves the button's outer-post timestamp, including detail-view
+footer metadata, through the adapter at
 press start and again at 600 ms. It navigates immediately at the threshold, without
 waiting for release or delaying short clicks. Cancel on movement beyond 10 CSS
 pixels, leaving the button, scroll, pointer cancellation, target replacement,
-navigation, hiding or disposal. Keep one delegated listener set and at most one
+navigation, hiding, window focus loss or disposal. Element blur when the repost
+button gains focus does not cancel a hold. Keep one delegated listener set and at most one
 pending gesture; do not tie it to a recognized home tab. Suppress only the completed
 gesture's release/click and the tracked touch gesture's context menu, preserving
 later gestures and ordinary keyboard, right- and middle-button actions. Before quote navigation the
 controller interrupts position correction and its rendering guard. The hold reads
-DOM URLs and requires no additional API calls or permissions.
+DOM URLs and requires no additional API calls or permissions. Navigation opens the
+held post's own more menu and activates the exact matching quotes link. It waits
+at most one second for asynchronous menu rendering and cancels on input, scroll,
+pointer cancellation, window focus loss, navigation, hiding, target replacement or
+disposal. Element blur and normal release do not cancel this wait; the completed
+gesture still suppresses its matching release/click. A missing more button immediately falls
+back to the resolved quotes URL; a missing or ineffective activity link falls back
+at the one-second deadline. Revalidate the page and held target before fallback;
+cancellation never triggers a reload. Browser checks compare timeOrigin; the
+fixture no longer turns a hard navigation into a same-document transition.
 
 Keep the DOM measurement limit at 500 outer-post elements, including boxes whose
 post IDs are unavailable. Never use a partial over-limit sample for correction.

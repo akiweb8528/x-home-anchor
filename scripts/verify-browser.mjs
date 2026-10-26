@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -8,7 +8,9 @@ import { setTimeout as delay } from 'node:timers/promises';
 // CDP supplies sustained trusted input unavailable in the MCP click interface.
 // Every network request is fulfilled locally or aborted; no live X is contacted.
 const root = new URL('../', import.meta.url);
-const evidencePrefix = 'refresh-viewport';
+const evidenceRoot = new URL('../verification/local/', import.meta.url);
+await mkdir(evidenceRoot, { recursive: true });
+const evidencePrefix = 'integrated';
 const fixture = await readFile(new URL('tests/fixtures/repost.html', root), 'utf8');
 let activeFixture = fixture;
 const content = await readFile(new URL('dist/content.js', root), 'utf8');
@@ -52,7 +54,7 @@ function send(method, params = {}, sessionId) {
     browser.stdio[3].write(JSON.stringify({ id, method, params, sessionId }) + '\0');
   });
 }
-const deadline = setTimeout(() => browser.kill('SIGKILL'), 90000);
+const deadline = setTimeout(() => browser.kill('SIGKILL'), 120000);
 let session;
 const command = (method, params) => send(method, params, session);
 async function evaluate(expression) {
@@ -97,9 +99,11 @@ try {
   assert.equal(result.menuClicks, 1); assert.equal(result.navigations.length, 0);
   reports.shortClick = result;
 
-  await reset(); await evaluate(content); p = await point(); await press(p); await delay(400);
+  await reset(); await evaluate(content); await evaluate(`document.querySelector('a[href="/outer/status/111"]').focus()`); const originBeforeHold = await evaluate('performance.timeOrigin'); p = await point(); await press(p); await delay(400);
   assert.equal((await read()).navigations.length, 0);
   await delay(290); result = await read();
+  assert.equal(await evaluate('performance.timeOrigin'), originBeforeHold, 'a hold must use the app router without reloading the document');
+  assert.equal(await evaluate('moreClicks'), 1);
   assert.deepEqual(result.navigations, ['https://x.com/outer/status/111/quotes']);
   assert.equal(result.menuClicks, 0);
   assert.equal(result.events.some(event => event.type === 'pointerup'), false);
@@ -107,11 +111,72 @@ try {
   assert.ok(elapsed >= 595 && elapsed < 800, `navigation onset ${elapsed}ms`);
   assert.ok(result.events.some(event => event.type === 'quotes-frame' && event.text.includes('/outer/status/111/quotes')));
   const screenshot = await command('Page.captureScreenshot', { format: 'png' });
-  await writeFile(new URL(`verification/${evidencePrefix}-hold.png`, root), Buffer.from(screenshot.data, 'base64'));
+  await writeFile(new URL('integrated-repost-hold.png', evidenceRoot), Buffer.from(screenshot.data, 'base64'));
   await mouse('mouseReleased', p); assert.equal((await read()).menuClicks, 0);
   await press(p); await delay(40); await mouse('mouseReleased', p);
   assert.equal((await read()).menuClicks, 1);
   reports.mouseHold = { beforeRelease: result, elapsedMs: elapsed, afterNextClick: await read() };
+
+  await reset(); await evaluate('menuDelay=150'); p = await point();
+  const delayedOrigin = await evaluate('performance.timeOrigin');
+  await press(p); await delay(650); assert.equal((await read()).navigations.length, 0);
+  await delay(200); assert.equal((await read()).navigations.length, 1);
+  assert.equal(await evaluate('performance.timeOrigin'), delayedOrigin);
+  await mouse('mouseReleased', p); reports.delayedActivityMenu = true;
+
+  for (const reason of ['missing-link', 'missing-more', 'inert-link']) {
+    await reset();
+    await evaluate(reason === 'missing-link' ? 'omitActivity=true'
+      : reason === 'missing-more' ? 'document.querySelector("button[data-testid=caret]").remove()' : 'inertActivity=true');
+    p = await point(); const origin = await evaluate('performance.timeOrigin');
+    await press(p); await delay(650);
+    if (reason !== 'missing-more') assert.equal(await evaluate('performance.timeOrigin'), origin);
+    await mouse('mouseReleased', p); await delay(1100);
+    assert.equal(await evaluate('location.href'), 'https://x.com/outer/status/111/quotes', reason);
+    assert.notEqual(await evaluate('performance.timeOrigin'), origin, reason);
+    reports[`activityFallback_${reason}`] = true;
+  }
+
+  for (const reason of ['keydown', 'scroll', 'window-blur', 'dispose', 'target-replaced', 'article-removed']) {
+    await reset(); await evaluate('menuDelay=500');
+    p = await point(); const origin = await evaluate('performance.timeOrigin');
+    await press(p); await delay(650);
+    if (reason === 'keydown') await command('Input.dispatchKeyEvent', {type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+    if (reason === 'scroll') await evaluate('scrollBy(0, 50)');
+    if (reason === 'window-blur') await evaluate("window.dispatchEvent(new Event('blur'))");
+    if (reason === 'dispose') await evaluate('globalThis[Symbol.for("x-home-anchor.instance")]()');
+    if (reason === 'target-replaced') await evaluate('document.querySelector("button[data-testid=retweet]").replaceWith(document.querySelector("button[data-testid=retweet]").cloneNode(true))');
+    if (reason === 'article-removed') await evaluate('document.querySelector("article").remove()');
+    await delay(1100);
+    assert.equal((await read()).navigations.length, 0, reason);
+    assert.equal(await evaluate('performance.timeOrigin'), origin, reason);
+    assert.equal((await read()).url, 'https://x.com/home', reason);
+    await mouse('mouseReleased', p); reports[`activityCancel_${reason}`] = true;
+  }
+
+  await reset(); await evaluate('menuDelay=500; window.elementBlurs=0; document.addEventListener("blur",()=>elementBlurs++,true)');
+  p = await point(); const releasedOrigin = await evaluate('performance.timeOrigin');
+  await press(p); await delay(650); await mouse('mouseReleased', p);
+  await evaluate('document.querySelector("#refresh").focus()'); await delay(650);
+  assert.ok(await evaluate('elementBlurs > 0'), 'the delayed menu must survive element focus changes');
+  assert.deepEqual((await read()).navigations, ['https://x.com/outer/status/111/quotes']);
+  assert.equal((await read()).menuClicks, 0);
+  assert.equal(await evaluate('performance.timeOrigin'), releasedOrigin);
+  reports.releaseAndElementBlurWhileWaiting = true;
+
+  await reset(); await evaluate('menuDelay=500');
+  await command('Emulation.setTouchEmulationEnabled', { enabled: true });
+  p = await point(); const cancelledTouchOrigin = await evaluate('performance.timeOrigin');
+  await command('Input.dispatchTouchEvent', { type:'touchStart', touchPoints:[{ ...p, id:0, radiusX:2, radiusY:2 }] });
+  await delay(650);
+  await command('Input.dispatchTouchEvent', { type:'touchCancel', touchPoints:[] }); await delay(1100);
+  result = await read();
+  assert.ok(result.events.some(event => event.type === 'pointercancel' && event.trusted));
+  assert.equal(result.navigations.length, 0);
+  assert.equal(result.url, 'https://x.com/home');
+  assert.equal(await evaluate('performance.timeOrigin'), cancelledTouchOrigin);
+  await command('Emulation.setTouchEmulationEnabled', { enabled: false });
+  reports.activityCancel_pointercancel = true;
 
   for (const kind of ['move', 'leave', 'scroll', 'replacement', 'route', 'dispose']) {
     await reset(); p = await point(); await press(p); await delay(180);
@@ -126,15 +191,18 @@ try {
   }
 
   await reset('/outer/status/111');
+  const originBeforeDetailHold = await evaluate('performance.timeOrigin');
   await command('Emulation.setTouchEmulationEnabled', { enabled: true });
   p = await point();
   const touch = type => command('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ ...p, id: 0, radiusX: 2, radiusY: 2 }] });
   await touch('touchStart'); await delay(100); await touch('touchEnd');
   assert.equal((await read()).menuClicks, 1);
   await evaluate('document.querySelector("#menu")?.remove(); menuClicks=0; events=[]; navigations=[]; document.querySelector("button[data-testid=retweet]").dataset.testid="unretweet"');
+  await evaluate(`document.querySelector('a[href="/outer/status/111"]').focus()`);
   await touch('touchStart'); await delay(400); assert.equal((await read()).navigations.length, 0);
   await delay(300); result = await read(); assert.equal(result.navigations.length, 1); assert.equal(result.menuClicks, 0);
   await touch('touchEnd'); await delay(60); assert.equal((await read()).menuClicks, 0);
+  assert.equal(await evaluate('performance.timeOrigin'), originBeforeDetailHold, 'detail hold must keep the document');
   reports.touchHoldOnDetailPage = { beforeRelease: result, afterRelease: await read() };
 
   await command('Emulation.setTouchEmulationEnabled', { enabled: false });
@@ -169,7 +237,7 @@ try {
   await delay(300);
   assert.deepEqual(await evaluate('Array.from(document.querySelector("#x-home-refresh-cover canvas").getContext("2d").getImageData(0,0,1,1).data)'), [220, 80, 140, 255]);
   const coverShot = await command('Page.captureScreenshot', { format: 'png' });
-  await writeFile(new URL(`verification/${evidencePrefix}-refresh-cover.png`, root), Buffer.from(coverShot.data, 'base64'));
+  await writeFile(new URL(`${evidencePrefix}-refresh-cover.png`, evidenceRoot), Buffer.from(coverShot.data, 'base64'));
   await delay(3300);
   const refreshed = await evaluate('({frames, final:readViewport(), counter:document.querySelector("#x-home-new-post-total").getAttribute("aria-label")})');
   assert.ok(refreshed.frames.some(frame => frame.covered), 'refresh must retain the old viewport while the virtualized list is replaced');
@@ -181,7 +249,7 @@ try {
   assert.match(refreshed.counter, /35$/);
   reports.refresh = { before: beforeRefresh, after: refreshed.final, checkedFrames: refreshed.frames.length, coveredFrames: refreshed.frames.filter(frame => frame.covered).length };
   const refreshShot = await command('Page.captureScreenshot', { format: 'png' });
-  await writeFile(new URL(`verification/${evidencePrefix}-refresh.png`, root), Buffer.from(refreshShot.data, 'base64'));
+  await writeFile(new URL(`${evidencePrefix}-refresh.png`, evidenceRoot), Buffer.from(refreshShot.data, 'base64'));
   for (const scenario of ['custom', 'reading-boundary', 'tall-boundary', 'single-boundary']) {
     const before = await beginRefresh(scenario); await delay(3600);
     const result = await evaluate('({frames,final:readViewport()})');
@@ -198,7 +266,7 @@ try {
     reports[`refresh_${scenario}`] = { before, after:result.final, checkedFrames:result.frames.length };
     if (scenario === 'reading-boundary') {
       const shot = await command('Page.captureScreenshot', { format: 'png' });
-      await writeFile(new URL(`verification/${evidencePrefix}-reading-boundary.png`, root), Buffer.from(shot.data, 'base64'));
+      await writeFile(new URL(`${evidencePrefix}-reading-boundary.png`, evidenceRoot), Buffer.from(shot.data, 'base64'));
     }
   }
   await beginRefresh(); await delay(300);
@@ -249,8 +317,8 @@ try {
   reports.refreshNoUpdate = true;
   assert.deepEqual(errors, []);
   const output = { date: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' }),
-    browser: version.product, method: 'Headless Chrome CDP trusted input; unchanged dist/content.js; synthetic HTTPS documents; runtime messaging stub; same-document quotes navigation intercepted by fixture; all requests fulfilled or blocked', reports, errors };
-  await writeFile(new URL(`verification/${evidencePrefix}-browser.json`, root), JSON.stringify(output, null, 2) + '\n');
+    browser: version.product, method: 'Headless Chrome CDP trusted mouse/touch/keyboard input and a synthetic window-blur event; unchanged dist/content.js; synthetic HTTPS documents; runtime messaging stub; app-owned activity link handles same-document quotes routing; full document navigation is not intercepted; all requests fulfilled or blocked', reports, errors };
+  await writeFile(new URL('integrated-browser.json', evidenceRoot), JSON.stringify(output, null, 2) + '\n');
   console.log(`Browser verification passed (${version.product}); mouse hold navigation ${elapsed.toFixed(1)} ms`);
 } finally {
   if (!ended) void send('Browser.close').catch(() => {});

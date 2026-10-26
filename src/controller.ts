@@ -2,6 +2,7 @@ import { clickIntent, isHome, readPosts, refreshDetails, timelineKind, timelineR
 import { RefreshPaintGuard } from './refresh-paint-guard.ts';
 import { RefreshTotal } from './refresh-total.ts';
 import { RepostHold } from './repost-hold.ts';
+import { openQuotes } from './quote-navigation.ts';
 import { PositionKeeper, INPUT_QUIET_MS } from './position.ts';
 import type { PostSample, State, Timeline } from './model.ts';
 
@@ -33,9 +34,9 @@ export class HomeController {
     this.keeper = new PositionKeeper(win);
     this.paintGuard = new RefreshPaintGuard(doc, win, () => this.checkScroll(), () => this.keeper.refreshing);
     this.refreshTotal = new RefreshTotal(doc);
-    this.repostHold = new RepostHold(doc, win, url => {
+    this.repostHold = new RepostHold(doc, win, target => {
       this.keeper.interrupt(); this.detach();
-      win.location.assign(url);
+      openQuotes(target, this.lifecycle.signal);
     });
     this.rootObserver = new MutationObserver(() => { this.reconcile(); this.flush(); });
     this.resizeObserver = new ResizeObserver(() => {

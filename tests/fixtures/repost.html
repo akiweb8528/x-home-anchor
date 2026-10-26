@@ -17,6 +17,7 @@
   <div role="tab" aria-selected="true">Unknown tab</div>
   <section aria-label="Timeline: Synthetic">
     <article data-testid="tweet">
+      <button data-testid="caret" aria-label="More">More</button>
       <div data-testid="quoteTweet" role="link">
         <div data-testid="User-Name"><a href="/quoted/status/222"><time>Quoted time</time></a></div>
         <div data-testid="card.wrapper"><a href="/preview/status/333"><time>Preview time</time></a></div>
@@ -39,14 +40,38 @@
   for (const type of ['pointerdown', 'pointerup', 'pointercancel', 'contextmenu', 'auxclick']) {
     window.addEventListener(type, e => record(type, { trusted: e.isTrusted, pointerType: e.pointerType, pointerId: e.pointerId, button: e.button }), true);
   }
-  navigation.addEventListener('navigate', e => {
-    if (!e.destination.url.endsWith('/quotes')) return;
-    record('quotes', { url: e.destination.url }); navigations.push(e.destination.url);
-    e.intercept({ handler: async () => {
-      document.querySelector('#result').textContent = 'Quotes: ' + e.destination.url;
-      requestAnimationFrame(() => record('quotes-frame', { text: document.querySelector('#result').textContent,
-        buttonTop: document.querySelector('button[data-testid="retweet"], button[data-testid="unretweet"]').getBoundingClientRect().top }));
-    } });
+  if (location.pathname === '/outer/status/111') {
+    const metadata = document.createElement('div');
+    metadata.append(document.querySelector('a[href="/outer/status/111"]'));
+    document.querySelector('article').append(metadata);
+  }
+  window.menuDelay = 0;
+  window.moreClicks = 0;
+  window.omitActivity = false;
+  window.inertActivity = false;
+  document.addEventListener('click', e => {
+    const more = e.target.closest('button[data-testid="caret"]');
+    if (!more) return;
+    moreClicks++;
+    const show = () => {
+      document.querySelector('#activity')?.remove();
+      const menu = document.createElement('div'); menu.id = 'activity'; menu.setAttribute('role', 'menu');
+      if (!omitActivity) {
+        const link = document.createElement('a'); link.setAttribute('role', 'menuitem');
+        link.href = '/outer/status/111/quotes'; link.textContent = 'View post activity';
+        link.addEventListener('click', event => {
+          event.preventDefault(); menu.remove();
+          if (inertActivity) return;
+          navigations.push(link.href); record('quotes', { url:link.href });
+          history.pushState({}, '', link.href);
+          document.querySelector('#result').textContent = 'Quotes: ' + link.href;
+          requestAnimationFrame(() => record('quotes-frame', { text:document.querySelector('#result').textContent }));
+        });
+        menu.append(link);
+      }
+      document.body.append(menu);
+    };
+    if (menuDelay) setTimeout(show, menuDelay); else queueMicrotask(show);
   });
   document.addEventListener('click', e => {
     if (!e.target.closest('button[data-testid="retweet"], button[data-testid="unretweet"]')) return;

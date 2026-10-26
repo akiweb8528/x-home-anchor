@@ -1,0 +1,36 @@
+{
+  "date": "2026-10-26",
+  "base": "3193e803dbf1fac14e7c47d5954b27852a713b5d",
+  "contentSha256": "a66e6c7119b5429230acceaa63b283240d23f52303dec1ce3d2c0bb7b6137a40",
+  "automated": {
+    "check": "passed",
+    "unitTests": 71,
+    "browser": "Chrome/155.0.8059.85",
+    "browserGroups": 19,
+    "browserErrors": 0,
+    "hardNavigationIntercepted": false,
+    "removedPostWhileMenuPending": "passed",
+    "fallbacks": [
+      "missing-link",
+      "missing-more",
+      "inert-link"
+    ]
+  },
+  "live": {
+    "environment": "Existing AI Agent Chrome; installed unpacked extension; trusted mouse holds of 750 ms",
+    "home": {
+      "correctQuotesUrl": true,
+      "timeOriginUnchanged": true
+    },
+    "detailMissingMoreFallback": {
+      "missingMoreSelectorSimulated": true,
+      "correctQuotesUrl": true,
+      "timeOriginChanged": true,
+      "simulationResetByNavigation": true
+    }
+  },
+  "notChecked": [
+    "Physical touch input on live X",
+    "Full live-X timeline position-preservation regression"
+  ]
+}

@@ -12,7 +12,7 @@ function fixture(t: TestContext, pointerType = 'mouse') {
   let menuClicks = 0;
   f.doc.body.addEventListener('click', () => { menuClicks++; });
   const hold = new RepostHold(f.doc as unknown as Document, f.win as unknown as Window,
-    url => { navigations.push({ url, at: f.clock.now }); });
+    target => { navigations.push({ url: target.url, at: f.clock.now }); });
   t.after(() => hold.dispose());
   const emit = (type: string, values: Record<string, unknown> = {}, target: any = post.path) =>
     f.emit(type, target, { pointerType, ...values });
@@ -119,7 +119,7 @@ test('moving among icon descendants preserves a hold; leaving the button cancels
 for (const type of ['scroll', 'wheel', 'pointercancel', 'popstate', 'hashchange', 'pagehide', 'blur', 'keydown']) {
   test(`${type} cancels a pending hold and leaves subsequent ordinary clicks alone`, t => {
     const f = fixture(t);
-    f.emit('pointerdown'); f.clock.advance(300); f.emit(type);
+    f.emit('pointerdown'); f.clock.advance(300); f.emit(type, {}, type === 'blur' ? f.win : f.path);
     f.clock.advance(600);
     assert.deepEqual(f.navigations, []);
     assert.equal(f.emit('click').defaultPrevented, false);
@@ -248,4 +248,31 @@ test('a completed touch hold preserves keyboard and unrelated-pointer context me
   assert.equal(f.emit('contextmenu', { pointerType: '', pointerId: -1, detail: 0 }).defaultPrevented, false);
   assert.equal(f.emit('contextmenu', { pointerType: 'touch', pointerId: 9 }).defaultPrevented, false);
   assert.equal(f.emit('contextmenu', { pointerType: 'touch', pointerId: 1 }).defaultPrevented, true);
+});
+
+test('detail timestamps outside the author header identify the held post', t => {
+  const f = fixture(t);
+  const metadata = f.element('div');
+  f.link.remove(); metadata.append(f.link); f.article.append(metadata);
+  f.win.location.href = expected.replace('/quotes', '');
+  f.win.location.pathname = new URL(f.win.location.href).pathname;
+  assert.equal(repostTarget(f.button as unknown as EventTarget)?.url, expected);
+  f.emit('pointerdown'); f.clock.advance(600);
+  assert.deepEqual(f.navigations, [{ url: expected, at: 700 }]);
+});
+
+test('a reply in a detail view keeps its own footer timestamp identity', t => {
+  const f = fixture(t);
+  f.win.location.href = expected.replace('/quotes', '');
+  const reply = f.post('456', 'reply');
+  reply.link.remove(); reply.article.append(reply.link);
+  assert.equal(repostTarget(reply.button as unknown as EventTarget)?.url, 'https://x.com/reply/status/456/quotes');
+});
+
+test('focusing the held button does not cancel when another page element blurs', t => {
+  const f = fixture(t);
+  f.emit('pointerdown');
+  f.emit('blur', { relatedTarget: f.button }, f.link);
+  f.clock.advance(600);
+  assert.deepEqual(f.navigations, [{ url: expected, at: 700 }]);
 });
